@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: ar-reconciliation
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ar_reconciliation}
+    username: ${DB_USER:ar_user}
+    password: ${DB_PASSWORD:ar_pass}
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 10
+        retry:
+          enabled: false
+
+server:
+  port: 8080
+  shutdown: graceful
+
+# AR workflow specific configuration
+ar:
+  consumers:
+    ingestion:
+      concurrency: 5-10
+    matching:
+      concurrency: 5-20
+    validation:
+      concurrency: 3-5
+    routing:
+      concurrency: 5-10
+
+  retry:
+    max-attempts-per-stage: 5
+    initial-backoff-ms: 1000
+    multiplier: 2.0
+    max-backoff-ms: 30000
+
+  failure-injection:
+    enabled: ${FAILURE_INJECTION:true}
+    ingestion-rate: 0.15
+    matching-rate: 0.20
+    validation-rate: 0.20
+    routing-rate: 0.10
+
+  reconciliation:
+    enabled: true
+    fixed-delay-ms: 300000
+    stuck-threshold-minutes: 10
+    batch-size: 100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.ar.reconciliation: DEBUG
+    org.springframework.amqp: INFO
+    org.hibernate.SQL: INFO
